@@ -8,9 +8,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
+    crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { nixpkgs, rust-overlay, flake-utils, ... }:
+  outputs = { nixpkgs, rust-overlay, flake-utils, crane, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -23,8 +24,16 @@
             "rustfmt"
           ];
         };
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        src = craneLib.cleanCargoSource ./.;
+        docker2nix = craneLib.buildPackage {
+          inherit src;
+          strictDeps = true;
+        };
       in
       {
+        packages.default = docker2nix;
+
         devShells.default = pkgs.mkShell {
           buildInputs = [
             rustToolchain
